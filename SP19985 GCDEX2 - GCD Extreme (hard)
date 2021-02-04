@@ -1,0 +1,106 @@
+#include <cstdio>
+#include <cctype>
+#include <algorithm>
+#include <cstring>
+#include <map>
+#include <cmath>
+using namespace std;
+
+namespace thecold
+{
+	typedef long long ll;
+	typedef unsigned long long nll;
+	
+	inline ll read()
+	{
+		ll res = 0; bool flag = false;
+		char c = getchar();
+		while(!isdigit(c))
+			flag = (c == '-') , c = getchar();
+		while(isdigit(c))
+			res = res * 10 + (c ^ 48) , c = getchar();
+		return !flag ? res : -res;
+	}
+	
+	const int Max_n = 4e7;
+	const int base = 38158100;
+	
+	int prime[Max_n] , tot;
+	
+	bool vis[Max_n];
+	
+	ll n , t , phi[Max_n];
+	
+	inline nll get_s(nll x)
+	{
+		if(x % 2) return ((x - 1) / 2) * x;
+		return (x / 2) * (x - 1);
+	}
+	
+	inline void prepare()
+	{
+		for(int i = 2 ; i <= base ; ++ i)
+		{
+			if(!vis[i]) prime[ ++ tot] = i , phi[i] = i - 1;
+			for(int j = 1 ; j <= tot && 1ll * i * prime[j] <= base ; ++ j)
+			{
+				vis[i * prime[j]] = true , phi[i * prime[j]] = phi[i] * phi[prime[j]];
+				if(i % prime[j] == 0) {phi[i * prime[j]] = phi[i] * prime[j]; break;}
+			}
+		}
+		phi[1] = 1;// bug
+		for(int i = 2 ; i <= base ; ++ i) phi[i] += phi[i - 1];
+	}
+	
+	inline nll get_fg(const nll x)
+	{
+		if(x % 2) return x * ((x + 1) / 2);
+		else return (x / 2) * (x + 1);
+	}
+	
+	map<ll , nll> mp;
+	
+	nll ans;
+	
+	inline nll get_f(const ll x)
+	{
+		if(x <= base) return phi[x];
+		if(mp.find(x) != mp.end()) return mp[x];
+		nll ret = get_fg(x);ll l = 2 , r;
+		for(; l <= x ; l = r + 1)
+		{
+			r = x / (x / l);
+			ret -= get_f(x / l) * (r - l + 1); 
+		}
+		return mp[x] = ret;
+	}
+	
+	inline void write(const nll ans)
+	{
+		if(ans >= 10) write(ans / 10);
+		putchar('0' + ans % 10);
+	}
+	
+	inline void main()
+	{
+		prepare() , t = read();
+//		for(int i = 1 ; i <= 5 ; ++ i) printf("%lld " , phi[i]);
+//		puts("");
+		while(t --)
+		{
+			n = read() , ans = 0;ll l = 1 , r;
+			for(; l <= n ; l = r + 1)
+			{
+				r = n / (n / l);
+				ans += (get_f(r) - get_f(l - 1)) * get_s(n / l);
+			}
+			write(ans) , puts("");
+		}
+	}
+}
+
+int main()
+{
+	thecold::main();
+	return 0;
+}
