@@ -1,0 +1,149 @@
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <algorithm>
+#include <cmath>
+using namespace std;
+
+namespace thecold
+{
+	inline int read()
+	{
+		int res = 0; bool flag = false;
+		char c = getchar();
+		while(!isdigit(c))
+			flag = (c == '-') , c = getchar();
+		while(isdigit(c))
+			res = res * 10 + (c ^ 48) , c = getchar();
+		return !flag ? res : -res;
+	}
+
+	const int Max_n = 4e4 + 5;
+	const int Max_m = 1e5 + 5;
+
+	struct node
+	{
+		int nex , to;
+		node(int a , int b)
+		{
+			nex = a , to = b;
+		}
+		node(){}
+	}edge[Max_n << 1];
+
+	int head[Max_n] , beg[Max_n] , ed[Max_n] , n , m , ans[Max_m];
+	int squ[Max_n << 1] , a[Max_n] , tot , tim , mx[Max_n] , base , lsh[Max_n];
+	int dep[Max_n] , fa[20][Max_n] , len , rev[Max_n << 1] , logm[Max_n];
+
+	inline void add_edge(const int x , const int y)
+	{
+		edge[ ++ tot] = node(head[x] , y) , head[x] = tot;
+		edge[ ++ tot] = node(head[y] , x) , head[y] = tot;
+	}
+
+	void dfs_tree(const int now , const int from)
+	{
+		mx[now] = beg[now] = ++ tim , squ[tim] = now , dep[now] = dep[from] + 1 , fa[0][now] = from , rev[tim] = now;
+		for(int i = 1 ; i <= logm[dep[now]] ; ++ i)	fa[i][now] = fa[i - 1][fa[i - 1][now]];
+		for(int i = head[now] ; i ; i = edge[i].nex)
+		{
+			int nex = edge[i].to; if(nex == from) continue;
+			dfs_tree(nex , now) , mx[now] = max(mx[now] , mx[nex]);
+		}
+		ed[now] = ++ tim , squ[tim] = now , rev[tim] = now;
+	}
+
+	inline int lca(int x , int y)
+	{
+		while(dep[x] > dep[y]) x = fa[logm[dep[x] - dep[y]]][x];
+		while(dep[y] > dep[x]) y = fa[logm[dep[y] - dep[x]]][y];
+		if(x == y) return x;
+		for(int i = logm[dep[x]] ; i >= 0 ; -- i)
+		{
+			if(fa[i][x] == fa[i][y]) continue;
+			x = fa[i][x] , y = fa[i][y];
+		}
+		return fa[0][x];
+	}
+
+	inline int get_block(const int x)
+	{
+		return (x + base - 1) / base;
+	}
+
+	struct Node
+	{
+		int l , r , bel , lc;
+		Node(const int a , const int b , const int c)
+		{
+			l = a , r = b , bel = c , lc = 0;
+		}
+		Node(const int a , const int b , const int c , const int d)
+		{
+			l = a , r = b , bel = c , lc = d;
+		}
+		Node(){}
+		bool operator < (const Node &a)const
+		{
+			if(get_block(l) != get_block(a.l)) return l < a.l;
+			return r < a.r;
+		}
+	}opt[Max_m];
+
+	int cnt[Max_n] , tmp_ans , col[Max_n];
+
+	inline int find(const int x)
+	{
+		return lower_bound(lsh + 1 , lsh + len , x) - lsh;
+	}
+
+	inline void change(const int pos)
+	{
+		int now = rev[pos];
+		cnt[now] ^= 1;
+		if(cnt[now] == 0)	if(-- col[a[now]] == 0) -- tmp_ans;
+		if(cnt[now] == 1)	if(++ col[a[now]] == 1) ++ tmp_ans;
+	}
+
+	inline void main()
+	{
+		n = read() , m = read() , base = sqrt(n * 2);
+		for(int i = 1 ; i <= n ; ++ i) a[i] = lsh[i] = read();
+		sort(lsh + 1 , lsh + n + 1) , len = unique(lsh + 1 , lsh + n + 1) - lsh;
+		for(int i = 1 ; i <= n ; ++ i) a[i] = find(a[i]);
+		for(int i = 2 ; i <= n ; ++ i) logm[i] = logm[i / 2] + 1;
+		for(int i = 1 ; i < n ; ++ i) add_edge(read() , read());
+		dfs_tree(1 , 0);
+		for(int i = 1 ; i <= m ; ++ i)
+		{
+			int ui = read() , vi = read() , l = lca(ui , vi);
+			// if(l == ui) opt[i] = Node(ed[ui] , beg[vi] , i);
+			// else if(l == vi) opt[i] = Node(ed[vi] , beg[ui] , i); bug
+			if(l == ui) opt[i] = Node(beg[ui] , beg[vi] , i);
+			else if(l == vi) opt[i] = Node(beg[vi] , beg[ui] , i);			
+			else
+			{
+				if(beg[ui] > beg[vi]) swap(ui , vi);
+				opt[i] = Node(ed[ui] , beg[vi] , i , l);
+			} 
+		}
+		sort(opt + 1 , opt + m + 1); int nowl = 1 , nowr = 0;
+		for(int i = 1 ; i <= m ; ++ i)
+		{
+			int l = opt[i].l , r = opt[i].r;
+			while(nowl < l) change(nowl ++);
+			while(nowr > r) change(nowr --);
+			while(nowl > l) change(-- nowl);
+			while(nowr < r) change(++ nowr);
+			ans[opt[i].bel] = tmp_ans;
+			if(opt[i].lc) ans[opt[i].bel] += col[a[opt[i].lc]] == 0;
+		}
+		for(int i = 1 ; i <= m ; ++ i) printf("%d\n" , ans[i]);
+	}
+}
+
+int main()
+{
+	thecold::main();
+	return 0;
+}
